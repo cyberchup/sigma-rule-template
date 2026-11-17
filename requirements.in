@@ -1,0 +1,12 @@
+# The tools' direct dependencies, pinned so CI runs are reproducible. pySigma stays on 1.x,
+# which the current sigma-cli 3.x and most pySigma backends require.
+#
+# Install from requirements.txt, not this file: it pins every package these pull in, with
+# hashes. After changing a pin here, regenerate it with the command at the top of
+# requirements.txt.
+sigma-cli==3.1.0
+pySigma==1.5.1
+pySigma-validators-sigmahq==0.21.0
+PyYAML==6.0.3
+yamllint==1.38.0
+pytest==9.2.0

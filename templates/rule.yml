@@ -1,0 +1,110 @@
+# Sigma rule template (https://github.com/cyberchup/sigma-rule-template).
+#
+# Copy this file and replace every <placeholder>, or let the scaffold do the mechanical
+# part. It copies the template without these comments and fills in the id, date, author,
+# title, related rule (with --derived-from) and, where the folder or a flag says, the
+# logsource:
+#
+#     python tools/new_rule.py rules/windows/process_creation/proc_creation_win_<subject>_<behavior>.yml --title "Potential <Short Behavior> Via <Tool Name>"
+#
+# Then `python tools/check_rule.py <rule>` reports any placeholder left and runs the Sigma
+# validators. The fields, their order and their formatting (4-space indents, single-quoted
+# strings) follow SigmaHQ's conventions, and everything here is standard Sigma
+# (specification v2.1.0) or one of SigmaHQ's own optional fields. A rule written from it
+# converts with sigma-cli to any backend: Microsoft Sentinel, Defender XDR, Elastic,
+# Splunk, QRadar and others. README.md explains what each field is for.
+
+# Title Case, keyword style, one line of at most 120 characters, no "Detects" and no final
+# period. The wording follows `level`: neutral for informational and low, "Potential ..."
+# for medium, "Suspicious ..." for high, and the exact threat for critical.
+title: Potential <Short Behavior> Via <Tool Name>
+# A fresh random UUIDv4. Never reuse or edit one, even when you rename the rule.
+id: <random UUIDv4>
+# Only for a rule adapted from another rule (SigmaHQ's, say) or one that replaces rules:
+# their ids, each with derived, obsolete, merged, renamed or similar. Delete it otherwise;
+# the scaffold does, unless it's given --derived-from.
+related:
+    - id: <UUID of the related rule>
+      type: derived
+# experimental for a new rule, test once it has fired in a lab and run in production
+# without trouble, stable once it has held up for a long time. Promotion takes evidence,
+# never age.
+status: experimental
+# Starts with "Detects". Say how the behavior shows up in the logs and why it matters.
+# No URLs: they go in references.
+description: |
+    Detects <the behavior> by <what the logs show>.
+    <Why it matters: what an attacker gains, and which tools or threat actors do this.>
+# Only for a rule derived from a SigmaHQ rule, which the Detection Rule License covers.
+# Delete it otherwise; the scaffold does, unless it's given --derived-from.
+license: DRL-1.1
+# Public sources only. GitHub links are permalinks pinned to a commit. ATT&CK goes in tags,
+# not here.
+references:
+    - <public URL>
+# Public names or handles, separated by commas. A derived rule keeps its upstream authors
+# first.
+author: <public name or handle>
+date: <YYYY-MM-DD>
+# Current ATT&CK tags: the tag for every tactic ATT&CK lists under the technique, then the
+# technique. Lowercase, with hyphens in tactic names.
+tags:
+    - attack.<tactic short name, such as execution>
+    - attack.<technique id, such as t1059.001>
+# Lowercase values. A generic category (process_creation, file_event, ...) where one exists.
+# Windows event log channels and most cloud logs use service instead of category: for
+# example product windows with service security, or product azure with service signinlogs.
+logsource:
+    category: <category, such as process_creation>
+    product: <product, such as windows>
+    # The telemetry or audit settings the rule needs, so whoever deploys it can check for
+    # them first.
+    definition: 'Requirements: <telemetry or audit settings the rule needs>'
+# Sigma field names (Image, CommandLine, ...), never a platform's own (process.command_line,
+# ProcessCommandLine): mapping them is the job of the backend's processing pipeline. Prefer
+# plain values, exact or with contains, startswith or endswith; regular expressions and
+# wildcards inside a value convert differently from one platform to the next.
+#
+# Name the blocks selection_<what it matches> and filter_main_<what it excludes>, so the
+# condition can say "all of selection_*" and "not 1 of filter_main_*". filter_main_*
+# excludes default OS behavior; filter_optional_* excludes common third-party software.
+# Never one environment's hosts, accounts or tools: that tuning belongs in the SIEM.
+#
+# Process creation (category process_creation, product windows). The OriginalFileName line
+# also catches a renamed copy of the binary:
+#     selection_img:
+#         - Image|endswith: '\certutil.exe'
+#         - OriginalFileName: 'CertUtil.exe'
+#     selection_cli:
+#         CommandLine|contains: 'urlcache '
+#     condition: all of selection_*
+#
+# Windows event log (product windows, service security):
+#     selection:
+#         EventID: 1102
+#     condition: selection
+#
+# Entra ID sign-ins (product azure, service signinlogs):
+#     selection:
+#         userAgent|contains: 'azurehound'
+#         ResultType: 0
+#     condition: selection
+detection:
+    selection_<what it matches>:
+        <FieldName>|<modifier>: '<value>'
+    filter_main_<what it excludes>:
+        <FieldName>: '<value>'
+    condition: all of selection_* and not 1 of filter_main_*
+# Specific and capitalized, in general terms. Unknown if you don't know of any, Unlikely if
+# you don't expect any. Never None, Pentest or Red Team.
+falsepositives:
+    - <Legitimate activity that also matches, in general terms>
+# informational, low, medium, high or critical, matching the title's wording.
+level: medium
+# How to make the rule fire in a lab: the Atomic Red Team test it was written against.
+# SigmaHQ's optional field. Delete it if you have no test.
+simulation:
+    - type: atomic-red-team
+      name: <the atomic's name, exactly>
+      technique: <ATT&CK ID, such as T1059.001>
+      atomic_guid: <the atomic's auto_generated_guid>

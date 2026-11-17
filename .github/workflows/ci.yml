@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    # Pinned so a runner image change can't break CI unannounced; bump deliberately.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      # requirements.txt pins every package with hashes, so a changed or substituted
+      # download fails the install instead of running in CI.
+      - name: Install dependencies
+        id: install
+        run: pip install --require-hashes -r requirements.txt
+
+      # Each check below runs even if an earlier one failed, so one run reports every problem.
+      - name: Tests for the template and tools
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pytest -q tests
+
+      - name: YAML lint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: yamllint --strict .
+
+      # For a repository made from this template: every rule under rules*/ must have no
+      # placeholders left and pass the Sigma validators. Skipped while there are none.
+      - name: Check rules
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          shopt -s nullglob
+          dirs=(rules*/)
+          if [ ${#dirs[@]} -eq 0 ]; then echo "No rules folder yet."; exit 0; fi
+          python tools/check_rule.py "${dirs[@]}"
